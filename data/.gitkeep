@@ -1,0 +1,12 @@
+# Dataset: Diabetes 130-US Hospitals (1999-2008)
+#
+# Download from Kaggle:
+#   https://www.kaggle.com/datasets/brandao/diabetes
+#
+# Steps:
+#   1. Download the dataset from the link above
+#   2. Extract the CSV file
+#   3. Place `diabetic_data.csv` in this directory (data/)
+#
+# Expected file: data/diabetic_data.csv
+# Size: ~20 MB, ~100K rows, 50 columns
