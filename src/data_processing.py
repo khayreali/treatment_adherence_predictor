@@ -215,10 +215,13 @@ def engineer_features(df):
         df["gender"] = df["gender"].map({"Male": 1, "Female": 0}).astype(int)
         print("Mapped 'gender' to binary (Male->1, Female->0)")
 
+    # print(df.head())  # uncomment for debugging
     return df
 
 
 ### Categorical encoding
+
+# TODO: maybe use target encoding instead of one-hot for high cardinality cols
 
 MEDICATION_COLS = [
     "metformin", "repaglinide", "nateglinide", "chlorpropamide",
@@ -304,6 +307,8 @@ def get_feature_target_split(df, target_col="readmitted_30d"):
     print(f"Feature matrix X: {X.shape}  |  Target vector y: {y.shape}  |  y mean: {y.mean():.4f}")
     return X, y
 
+
+# TODO: add option to save intermediate dataframes to disk for caching
 
 ### Full pipeline
 def run_full_pipeline(filepath) -> tuple:
