@@ -216,3 +216,115 @@ def engineer_features(df):
         print("Mapped 'gender' to binary (Male->1, Female->0)")
 
     return df
+
+
+### Categorical encoding
+
+MEDICATION_COLS = [
+    "metformin", "repaglinide", "nateglinide", "chlorpropamide",
+    "glimepiride", "acetohexamide", "glipizide", "glyburide",
+    "tolbutamide", "pioglitazone", "rosiglitazone", "acarbose",
+    "miglitol", "troglitazone", "tolazamide", "insulin",
+    "glyburide-metformin", "glipizide-metformin",
+    "glimepiride-pioglitazone", "metformin-rosiglitazone",
+    "metformin-pioglitazone",
+]
+
+ONE_HOT_COLS = [
+    "admission_type_id",
+    "discharge_disposition_id",
+    "admission_source_id",
+    "race",
+]
+
+med_map = {"No": 0, "Steady": 1, "Up": 2, "Down": 3}
+
+def encode_categoricals(df, target_col="readmitted_30d"):
+    """Convert remaining categorical columns to numeric."""
+    df = df.copy()
+
+    # one-hot encoding
+    ohe_cols = [c for c in ONE_HOT_COLS if c in df.columns]
+    if ohe_cols:
+        for c in ohe_cols:
+            df[c] = df[c].astype(str)
+        df = pd.get_dummies(df, columns=ohe_cols, drop_first=False, dtype=int)
+        print(f"One-hot encoded {len(ohe_cols)} columns: {ohe_cols}")
+
+    # medication ordinal encoding
+    med_cols = [c for c in MEDICATION_COLS if c in df.columns]
+    for c in med_cols:
+        df[c] = df[c].map(med_map).fillna(0).astype(int)
+    if med_cols:
+        print(f"Ordinal-encoded {len(med_cols)} medication columns (No->0, Steady->1, Up->2, Down->3)")
+
+    # num_medications_bin
+    if "num_medications_bin" in df.columns:
+        df["num_medications_bin"] = (
+            df["num_medications_bin"]
+            .astype(str)
+            .map({"low": 0, "medium": 1, "high": 2})
+            .fillna(1)
+            .astype(int)
+        )
+        print("Ordinal-encoded 'num_medications_bin' (low->0, medium->1, high->2)")
+
+    # drop leftover object columns
+    remaining_obj = [
+        c
+        for c in df.select_dtypes(include=["object", "category"]).columns
+        if c != target_col
+    ]
+    if remaining_obj:
+        print(f"Warning: dropping {len(remaining_obj)} remaining non-numeric columns: {remaining_obj}")
+        df.drop(columns=remaining_obj, inplace=True)
+
+    # make sure everything is numeric
+    non_numeric = [
+        c
+        for c in df.select_dtypes(exclude=[np.number]).columns
+        if c != target_col
+    ]
+    if non_numeric:
+        print(f"Warning: converting {len(non_numeric)} columns to numeric: {non_numeric}")
+        for c in non_numeric:
+            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+
+    print(f"Final encoded DataFrame: {df.shape[0]:,} rows x {df.shape[1]} columns")
+    return df
+
+
+# Feature / target split
+def get_feature_target_split(df, target_col="readmitted_30d"):
+    if target_col not in df.columns:
+        raise KeyError(f"Target column '{target_col}' not found in DataFrame")
+
+    y = df[target_col].copy()
+    X = df.drop(columns=[target_col])
+    print(f"Feature matrix X: {X.shape}  |  Target vector y: {y.shape}  |  y mean: {y.mean():.4f}")
+    return X, y
+
+
+### Full pipeline
+def run_full_pipeline(filepath) -> tuple:
+    """Run the whole data processing pipeline and return (X, y)."""
+    print("--- Loading data ---")
+    df = load_raw_data(filepath)
+
+    print("\n--- Cleaning ---")
+    df = clean_data(df)
+
+    print("\n--- Encoding target ---")
+    df = encode_target(df)
+
+    print("\n--- Feature engineering ---")
+    df = engineer_features(df)
+
+    print("\n--- Encoding categoricals ---")
+    df = encode_categoricals(df)
+
+    print("\n--- Splitting features and target ---")
+    X, y = get_feature_target_split(df)
+
+    print("\nPipeline done!")
+    return X, y
