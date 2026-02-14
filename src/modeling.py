@@ -110,3 +110,184 @@ def evaluate_model(model, X_test, y_test, model_name) -> dict:
         "pr_auc": average_precision_score(y_test, y_proba),
         "classification_report_str": report_str,
     }
+
+
+def plot_roc_curves(models, X_test, y_test) -> go.Figure:
+    """Plot ROC curves for each model in the dict."""
+    # plotly is way nicer than matplotlib for this
+    fig = go.Figure()
+
+    # diagonal reference line
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 1],
+            y=[0, 1],
+            mode="lines",
+            line=dict(dash="dash", color="grey"),
+            name="Random (AUC = 0.50)",
+            showlegend=True,
+        )
+    )
+
+    for name, model in models.items():
+        y_proba = model.predict_proba(X_test)[:, 1]
+        fpr, tpr, _ = roc_curve(y_test, y_proba)
+        auc_val = roc_auc_score(y_test, y_proba)
+        fig.add_trace(
+            go.Scatter(
+                x=fpr,
+                y=tpr,
+                mode="lines",
+                name=f"{name} (AUC = {auc_val:.3f})",
+            )
+        )
+
+    fig.update_layout(
+        title="ROC Curves",
+        xaxis_title="False Positive Rate",
+        yaxis_title="True Positive Rate",
+        legend=dict(x=0.58, y=0.05),
+        template="plotly_white",
+        width=700,
+        height=500,
+    )
+    return fig
+
+
+def plot_pr_curves(models, X_test, y_test) -> go.Figure:
+    fig = go.Figure()
+
+    # baseline = positive class prevalence
+    baseline = np.mean(np.asarray(y_test))
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 1],
+            y=[baseline, baseline],
+            mode="lines",
+            line=dict(dash="dash", color="grey"),
+            name=f"Baseline (prevalence = {baseline:.2f})",
+            showlegend=True,
+        )
+    )
+
+    for name, model in models.items():
+        y_proba = model.predict_proba(X_test)[:, 1]
+        precision_vals, recall_vals, _ = precision_recall_curve(y_test, y_proba)
+        pr_auc = average_precision_score(y_test, y_proba)
+        fig.add_trace(
+            go.Scatter(
+                x=recall_vals,
+                y=precision_vals,
+                mode="lines",
+                name=f"{name} (AP = {pr_auc:.3f})",
+            )
+        )
+
+    fig.update_layout(
+        title="Precision-Recall Curves",
+        xaxis_title="Recall",
+        yaxis_title="Precision",
+        legend=dict(x=0.02, y=0.05),
+        template="plotly_white",
+        width=700,
+        height=500,
+    )
+    return fig
+
+
+def plot_feature_importance_shap(model, X_test, feature_names, top_n=20) -> go.Figure:
+    importance_values = None
+    importance_label = "Mean |SHAP value|"
+
+    try:
+        import shap
+
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X_test)
+
+        # for binary classifiers shap_values may be a list of two arrays
+        if isinstance(shap_values, list):
+            shap_values = shap_values[1]
+
+        importance_values = np.abs(shap_values).mean(axis=0)
+    except Exception:
+        warnings.warn(
+            "SHAP TreeExplainer failed; falling back to model.feature_importances_.",
+            stacklevel=2,
+        )
+
+    if importance_values is None:
+        if hasattr(model, "feature_importances_"):
+            importance_values = np.asarray(model.feature_importances_)
+            importance_label = "Feature importance"
+        else:
+            raise ValueError(
+                "Model does not support feature_importances_ and SHAP failed."
+            )
+
+    # select top N
+    top_indices = np.argsort(importance_values)[-top_n:]
+    top_features = [feature_names[i] for i in top_indices]
+    top_importances = importance_values[top_indices]
+
+    fig = go.Figure(
+        go.Bar(
+            x=top_importances,
+            y=top_features,
+            orientation="h",
+            marker_color="steelblue",
+        )
+    )
+    fig.update_layout(
+        title=f"Top {top_n} Feature Importances",
+        xaxis_title=importance_label,
+        yaxis_title="Feature",
+        template="plotly_white",
+        height=max(400, top_n * 25),
+        width=700,
+        yaxis=dict(autorange="reversed"),
+    )
+    # reverse so most important feature is at the top
+    fig.update_yaxes(autorange=True)
+    return fig
+
+
+# see: sklearn calibration_curve docs
+def plot_calibration_curve(model, X_test, y_test, model_name, n_bins=10) -> go.Figure:
+    y_proba = model.predict_proba(X_test)[:, 1]
+    fraction_of_positives, mean_predicted_value = calibration_curve(
+        y_test, y_proba, n_bins=n_bins
+    )
+
+    fig = go.Figure()
+
+    # perfectly calibrated reference
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 1],
+            y=[0, 1],
+            mode="lines",
+            line=dict(dash="dash", color="grey"),
+            name="Perfectly calibrated",
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=mean_predicted_value,
+            y=fraction_of_positives,
+            mode="lines+markers",
+            name=model_name,
+        )
+    )
+
+    fig.update_layout(
+        title=f"Calibration Curve — {model_name}",
+        xaxis_title="Mean predicted probability",
+        yaxis_title="Fraction of positives",
+        template="plotly_white",
+        width=700,
+        height=500,
+        legend=dict(x=0.58, y=0.05),
+    )
+    return fig
