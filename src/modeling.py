@@ -291,3 +291,63 @@ def plot_calibration_curve(model, X_test, y_test, model_name, n_bins=10) -> go.F
         legend=dict(x=0.58, y=0.05),
     )
     return fig
+
+
+def tune_with_optuna(X_train, y_train, X_val, y_val, model_type="xgboost", n_trials=50) -> dict:
+    """Tune hyperparams with Optuna, maximizing ROC-AUC."""
+
+    if model_type != "xgboost":
+        raise ValueError(
+            f"Unsupported model_type '{model_type}'. Currently only 'xgboost' is supported."
+        )
+
+    y_train_arr = np.asarray(y_train)
+    n_negative = int(np.sum(y_train_arr == 0))
+    n_positive = int(np.sum(y_train_arr == 1))
+    scale_pos_weight = n_negative / max(n_positive, 1)
+
+    def objective(trial) -> float:
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 100, 500),
+            "max_depth": trial.suggest_int("max_depth", 3, 10),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+            "reg_alpha": trial.suggest_float("reg_alpha", 0.0, 1.0),
+            "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 1.0),
+        }
+
+        model = xgb.XGBClassifier(
+            **params,
+            scale_pos_weight=scale_pos_weight,
+            use_label_encoder=False,
+            eval_metric="logloss",
+            random_state=42,
+        )
+        model.fit(X_train, y_train, verbose=False)
+
+        y_proba = model.predict_proba(X_val)[:, 1]
+        return roc_auc_score(y_val, y_proba)
+
+    # suppress optuna logging, it's super noisy
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+
+    print(f"best AUC: {study.best_value:.4f}")
+    print(f"best params: {study.best_params}")
+
+    return study.best_params
+
+
+def save_model(model, filepath):
+    joblib.dump(model, filepath)
+    print(f"Model saved to {filepath}")
+
+
+def load_model(filepath):
+    model = joblib.load(filepath)
+    print(f"Model loaded from {filepath}")
+    return model
