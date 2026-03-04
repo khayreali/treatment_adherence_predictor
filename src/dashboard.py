@@ -144,3 +144,127 @@ except Exception as exc:
     st.exception(exc)
 
 st.divider()
+
+### section 2: cohort explorer
+
+st.header("2. Cohort Explorer")
+
+# TODO: add a filter for diagnosis type
+
+try:
+    df_clean = load_joblib(DF_CLEAN_PATH)
+
+    if df_clean is None:
+        st.warning(
+            f"Cleaned dataset not found at `{DF_CLEAN_PATH}`. "
+            "Run the analysis notebooks to generate model artifacts."
+        )
+    else:
+        # find a usable readmission column
+        readmit_col = None
+        for candidate in ("readmitted_30d", "readmitted", "readmitted_binary", "readmit_flag"):
+            if candidate in df_clean.columns:
+                readmit_col = candidate
+                break
+
+        if readmit_col is None:
+            st.info(
+                "No readmission column found in the cleaned dataset. "
+                "Cohort explorer requires a `readmitted` column."
+            )
+        else:
+            # build filter options
+            age_options = ["All"]
+            if "age" in df_clean.columns:
+                age_options += sorted(df_clean["age"].dropna().unique().tolist())
+
+            a1c_options = ["All"]
+            if "A1Cresult" in df_clean.columns:
+                a1c_options += sorted(
+                    df_clean["A1Cresult"].dropna().unique().astype(str).tolist()
+                )
+
+            med_options = ["All"]
+            if "num_medications_bin" in df_clean.columns:
+                med_options += sorted(
+                    df_clean["num_medications_bin"]
+                    .dropna()
+                    .unique()
+                    .astype(str)
+                    .tolist()
+                )
+            elif "num_medications" in df_clean.columns:
+                # create bins on the fly if needed
+                df_clean["num_medications_bin"] = pd.cut(
+                    df_clean["num_medications"],
+                    bins=[0, 5, 10, 20, 50, 100],
+                    labels=["0-5", "6-10", "11-20", "21-50", "51+"],
+                )
+                med_options += sorted(
+                    df_clean["num_medications_bin"]
+                    .dropna()
+                    .unique()
+                    .astype(str)
+                    .tolist()
+                )
+
+            # dropdowns
+            filter_col1, filter_col2, filter_col3 = st.columns(3)
+            with filter_col1:
+                sel_age = st.selectbox("Age Group", age_options)
+            with filter_col2:
+                sel_a1c = st.selectbox("A1C Result", a1c_options)
+            with filter_col3:
+                sel_med = st.selectbox("Number of Medications Bin", med_options)
+
+            # apply filters
+            mask = pd.Series(True, index=df_clean.index)
+            if sel_age != "All" and "age" in df_clean.columns:
+                mask &= df_clean["age"] == sel_age
+            if sel_a1c != "All" and "A1Cresult" in df_clean.columns:
+                mask &= df_clean["A1Cresult"].astype(str) == sel_a1c
+            if sel_med != "All" and "num_medications_bin" in df_clean.columns:
+                mask &= df_clean["num_medications_bin"].astype(str) == sel_med
+
+            cohort = df_clean.loc[mask]
+
+            overall_rate = float(df_clean[readmit_col].mean())
+            cohort_rate = float(cohort[readmit_col].mean()) if len(cohort) > 0 else 0.0
+
+            # metrics
+            m1, m2 = st.columns(2)
+            m1.metric("Cohort Size", f"{len(cohort):,}")
+            m2.metric(
+                "Cohort Readmission Rate",
+                f"{cohort_rate:.1%}",
+                delta=f"{cohort_rate - overall_rate:+.1%} vs overall",
+            )
+
+            # bar chart comparing cohort vs overall
+            comparison_df = pd.DataFrame(
+                {
+                    "Group": ["Overall", "Selected Cohort"],
+                    "Readmission Rate": [overall_rate, cohort_rate],
+                }
+            )
+            fig_cohort = px.bar(
+                comparison_df,
+                x="Group",
+                y="Readmission Rate",
+                color="Group",
+                text_auto=".1%",
+                title="Readmission Rate: Cohort vs Overall",
+                color_discrete_sequence=["#636EFA", "#EF553B"],
+            )
+            fig_cohort.update_layout(
+                yaxis_title="Readmission Rate",
+                yaxis_tickformat=".0%",
+                showlegend=False,
+            )
+            st.plotly_chart(fig_cohort, use_container_width=True)
+
+except Exception as exc:
+    st.warning("Could not load Cohort Explorer data. Check that notebooks have been run.")
+    st.exception(exc)
+
+st.divider()
