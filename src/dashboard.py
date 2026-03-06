@@ -3,6 +3,7 @@
 
 # NOTE: need to run notebooks first to generate the model files
 
+import pathlib
 from pathlib import Path
 
 import numpy as np
@@ -12,7 +13,18 @@ import plotly.graph_objects as go
 import streamlit as st
 from sklearn.metrics import f1_score, precision_score, recall_score
 
-OUTPUTS_DIR = Path("outputs/models")
+# try to pull in charting helpers from our ab_test module
+try:
+    from ab_test import plot_conversion_rates, plot_cumulative_lift, compute_confidence_interval
+except ImportError:
+    # might not be importable depending on how the app is launched
+    plot_conversion_rates = None
+    plot_cumulative_lift = None
+    compute_confidence_interval = None
+
+# figure out where the data files are relative to this script
+BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
+OUTPUTS_DIR = BASE_DIR / "outputs" / "models"
 
 MODEL_PATH = OUTPUTS_DIR / "best_model.joblib"
 X_TEST_PATH = OUTPUTS_DIR / "X_test.joblib"
