@@ -268,3 +268,136 @@ except Exception as exc:
     st.exception(exc)
 
 st.divider()
+
+
+### section 3: a/b test results
+
+st.header("3. A/B Test Results")
+
+try:
+    ab_results = load_joblib(AB_RESULTS_PATH)
+
+    if ab_results is None:
+        st.warning(
+            f"A/B test results not found at `{AB_RESULTS_PATH}`. "
+            "Run the notebooks first to generate results."
+        )
+    else:
+        # pull out summary metrics from the nested dict structure
+        # the notebook saves sim_results, test_results, etc. as sub-dicts
+        sim_results = ab_results.get("sim_results", {})
+        test_results = ab_results.get("test_results", {})
+
+        sample_control = sim_results.get("control_total", 0)
+        sample_treatment = sim_results.get("treatment_total", 0)
+        control_rate = sim_results.get("control_rate_observed", 0.0)
+        treatment_rate = sim_results.get("treatment_rate_observed", 0.0)
+        p_value = test_results.get("p_value", 1.0)
+
+        relative_lift = (
+            (treatment_rate - control_rate) / control_rate
+            if control_rate > 0
+            else 0.0
+        )
+
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric("Control Sample Size", f"{sample_control:,}")
+        mc2.metric("Treatment Sample Size", f"{sample_treatment:,}")
+        mc3.metric("Control Rate", f"{control_rate:.2%}")
+        mc4.metric("Treatment Rate", f"{treatment_rate:.2%}")
+        mc5.metric("p-value", f"{p_value:.4f}")
+
+        st.caption(f"Relative lift: **{relative_lift:+.2%}**")
+
+        # regenerate the charts using our ab_test module helpers when available
+        ci_control = ab_results.get("ci_control")
+        ci_treatment = ab_results.get("ci_treatment")
+        n_per_group = ab_results.get("n_per_group", 0)
+        baseline_rate = ab_results.get("baseline_rate", control_rate)
+        treat_rate_true = ab_results.get("treatment_rate", treatment_rate)
+
+        # if the ab_test helpers got imported, use them for nicer charts with CIs
+        if plot_conversion_rates is not None and ci_control is not None and ci_treatment is not None:
+            fig_conv = plot_conversion_rates(sim_results, ci_control, ci_treatment)
+        else:
+            # fallback: simple bar chart if the module isn't available
+            conv_df = pd.DataFrame(
+                {
+                    "Group": ["Control", "Treatment"],
+                    "Conversion Rate": [control_rate, treatment_rate],
+                }
+            )
+            fig_conv = px.bar(
+                conv_df,
+                x="Group",
+                y="Conversion Rate",
+                color="Group",
+                text_auto=".2%",
+                title="Conversion Rate Comparison",
+                color_discrete_sequence=["#636EFA", "#00CC96"],
+            )
+            fig_conv.update_layout(
+                yaxis_title="Conversion Rate",
+                yaxis_tickformat=".1%",
+                showlegend=False,
+            )
+
+        if plot_cumulative_lift is not None and n_per_group > 0:
+            fig_lift = plot_cumulative_lift(
+                baseline_rate, treat_rate_true, n_per_group
+            )
+            chart_col1, chart_col2 = st.columns(2)
+            with chart_col1:
+                st.plotly_chart(fig_conv, use_container_width=True)
+            with chart_col2:
+                st.plotly_chart(fig_lift, use_container_width=True)
+        else:
+            st.plotly_chart(fig_conv, use_container_width=True)
+            st.info("Cumulative lift chart not available -- ab_test module couldn't be imported.")
+
+        # business impact section
+        # try to use the pre-computed business_impact from the notebook first
+        biz = ab_results.get("business_impact", {})
+        with st.expander("Business Impact -- Cost Savings Analysis"):
+            if biz:
+                st.markdown(
+                    f"""
+| Metric | Value |
+|---|---|
+| Annual readmissions (baseline) | {biz.get('annual_readmissions_baseline', 0):,.0f} |
+| Annual readmissions (after intervention) | {biz.get('annual_readmissions_after', 0):,.0f} |
+| Readmissions prevented | {biz.get('readmissions_prevented', 0):,.0f} |
+| Gross cost savings | ${biz.get('annual_cost_savings', 0):,.0f} |
+| Intervention cost (${biz.get('cost_per_patient_for_intervention', 50):.0f}/patient) | ${biz.get('annual_cost_savings', 0) - biz.get('net_savings', 0):,.0f} |
+| **Net savings** | **${biz.get('net_savings', 0):,.0f}** |
+| **ROI** | **{biz.get('roi_percentage', 0):,.1f}%** |
+"""
+                )
+            else:
+                # fallback rough estimate if business_impact wasn't saved
+                avg_readmission_cost = 15_000.0
+                annual_patients = 50_000
+                reduction = abs(relative_lift) if relative_lift < 0 else relative_lift
+                projected_savings = annual_patients * reduction * avg_readmission_cost
+                st.markdown(
+                    f"""
+| Metric | Value |
+|---|---|
+| Average readmission cost | ${avg_readmission_cost:,.0f} |
+| Annual eligible patients | {annual_patients:,} |
+| Estimated reduction in readmission rate | {reduction:.2%} |
+| **Projected annual savings** | **${projected_savings:,.0f}** |
+"""
+                )
+            st.markdown(
+                "These are rough estimates based on the A/B test lift "
+                "applied to the full eligible population. Real savings "
+                "will depend on patient mix and how well the intervention "
+                "is actually carried out."
+            )
+
+except Exception as exc:
+    st.warning("Could not load A/B Test results. Have you run the notebooks?")
+    st.exception(exc)
+
+st.divider()
