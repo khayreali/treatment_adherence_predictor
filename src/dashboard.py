@@ -281,7 +281,6 @@ except Exception as exc:
 
 st.divider()
 
-
 ### section 3: a/b test results
 
 st.header("3. A/B Test Results")
@@ -413,3 +412,85 @@ except Exception as exc:
     st.exception(exc)
 
 st.divider()
+
+### section 4: top risk drivers
+
+st.header("4. Top Risk Drivers")
+
+# these importances show correlation not causation, should note that
+
+try:
+    feature_importance = load_joblib(FEATURE_IMPORTANCE_PATH)
+
+    if feature_importance is None:
+        st.warning(
+            f"Feature importance data not found at `{FEATURE_IMPORTANCE_PATH}`. "
+            "Run the notebooks to generate this file."
+        )
+    else:
+        # normalize to a dataframe with [feature, importance] columns
+        if isinstance(feature_importance, dict):
+            fi_df = pd.DataFrame(
+                list(feature_importance.items()),
+                columns=["feature", "importance"],
+            )
+        elif isinstance(feature_importance, pd.Series):
+            fi_df = feature_importance.reset_index()
+            fi_df.columns = ["feature", "importance"]
+        elif isinstance(feature_importance, pd.DataFrame):
+            fi_df = feature_importance.copy()
+            if "feature" not in fi_df.columns:
+                if fi_df.shape[1] == 2:
+                    fi_df.columns = ["feature", "importance"]
+                else:
+                    fi_df = fi_df.reset_index()
+                    fi_df.columns = ["feature", "importance"] + list(
+                        fi_df.columns[2:]
+                    )
+        else:
+            fi_df = pd.DataFrame(
+                {"feature": [f"Feature {i}" for i in range(len(feature_importance))],
+                 "importance": list(feature_importance)}
+            )
+
+        fi_df = fi_df.sort_values("importance", ascending=True).tail(20)
+
+        fig_fi = px.bar(
+            fi_df,
+            x="importance",
+            y="feature",
+            orientation="h",
+            title="Top 20 Risk Drivers (Feature Importance)",
+            labels={"importance": "Importance", "feature": "Feature"},
+            color="importance",
+            color_continuous_scale="Viridis",
+        )
+        fig_fi.update_layout(
+            yaxis_title="",
+            xaxis_title="Importance Score",
+            coloraxis_showscale=False,
+            height=600,
+        )
+        st.plotly_chart(fig_fi, use_container_width=True)
+
+        st.subheader("Interpretation")
+        st.markdown(
+            "The chart above ranks the top 20 features by how much they contribute "
+            "to the model's predictions. Higher importance = stronger influence on "
+            "whether someone gets flagged as high-risk for non-adherence.\n\n"
+            "**Key takeaways:**\n"
+            "- Clinical stuff like number of inpatient visits, medications, "
+            "and lab results tend to dominate.\n"
+            "- Demographics (age, admission type) also carry signal and might "
+            "point to systemic issues worth looking into.\n"
+            "- Remember these importances reflect *predictive* power, not "
+            "causation. They're a starting point for deeper clinical review."
+        )
+
+except Exception as exc:
+    st.warning("Could not load feature importance data. Make sure notebooks have been run.")
+    st.exception(exc)
+
+# footer
+st.divider()
+st.caption("Built with Streamlit | Data: Diabetes 130-US Hospitals Dataset")
