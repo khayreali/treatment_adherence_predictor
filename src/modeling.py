@@ -195,6 +195,7 @@ def plot_pr_curves(models, X_test, y_test) -> go.Figure:
     return fig
 
 
+# FIXME: the SHAP fallback might not work for all model types
 def plot_feature_importance_shap(model, X_test, feature_names, top_n=20) -> go.Figure:
     importance_values = None
     importance_label = "Mean |SHAP value|"
