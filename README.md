@@ -1,5 +1,6 @@
 # Treatment Adherence & Readmission Risk Predictor
 
+
 ## TL;DR
 
 - Built an ML pipeline on **101,766 hospital encounters** to predict 30-day diabetes readmissions
@@ -21,6 +22,12 @@ SHAP values on the final model. Prior inpatient visits dominate everything else,
 
 ![Feature Importance](assets/feature_importance.png)
 
+### Intervention Impact (A/B Test Simulation)
+
+Simulated a randomized follow-up intervention on the high-risk cohort. The treatment group saw a statistically significant drop in readmission rates. These are simulated numbers, but the effect size is grounded in published intervention literature.
+
+![A/B Test Results](assets/ab_test_results.png)
+
 ### Risk Score Distribution
 
 How the model's predicted risk scores distribute across the patient population. The long right tail is where targeted outreach would focus.
@@ -29,7 +36,7 @@ How the model's predicted risk scores distribute across the patient population. 
 
 ## What This Project Does
 
-Built a pipeline that predicts which diabetes patients will be readmitted within 30 days, then simulated what would happen if we actually intervened on the high-risk ones. I trained three models (logistic regression, random forest, XGBoost), picked the best one, interpreted it with SHAP, and ran an A/B test simulation to estimate real-world cost savings.
+Built a pipeline that predicts which diabetes patients will be readmitted within 30 days, then simulated what would happen if we actually intervened on the high-risk ones. I trained three models (logistic regression, random forest, XGBoost), picked the best one, interpreted it with SHAP, and ran an A/B test simulation to estimate real-world cost savings. There's also a Streamlit dashboard where you can explore risk scores and filter patient cohorts interactively.
 
 ## Project Structure
 
@@ -37,7 +44,9 @@ Built a pipeline that predicts which diabetes patients will be readmitted within
 treatment-adherence-predictor/
 ├── assets/                          # Chart PNGs for README
 ├── data/
-│   └── diabetic_data.csv
+│   ├── diabetic_data.csv
+│   ├── IDS_mapping.csv
+│   └── dataset.zip
 ├── notebooks/
 │   ├── 01_eda.ipynb                 # Exploratory data analysis
 │   ├── 02_modeling.ipynb            # Model training & evaluation
@@ -59,8 +68,6 @@ treatment-adherence-predictor/
 
 ## How to Run
 
-Make sure you have Python 3.10+ installed.
-
 ```bash
 git clone https://github.com/yourusername/treatment-adherence-predictor.git
 cd treatment-adherence-predictor
@@ -70,7 +77,19 @@ pip install -r requirements.txt
 
 Download `diabetic_data.csv` from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes) and drop it in `data/`. Then run the notebooks in order (01 -> 02 -> 03).
 
+```bash
+streamlit run src/dashboard.py
+```
+
+The dashboard is also deployed at [treatment-adherence.streamlit.app](https://treatment-adherence.streamlit.app).
+
 Or just look at the notebooks on GitHub -- they have all the outputs embedded.
+
+## Dashboard
+
+The Streamlit app lets you explore patient risk scores, filter cohorts by age/A1C/medication count, and dig into the A/B test results. Here's what the risk distribution view looks like:
+
+![Dashboard Preview - Risk Distribution](assets/risk_distribution.png)
 
 ## Tech Stack
 
