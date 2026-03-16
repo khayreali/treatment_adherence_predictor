@@ -1,5 +1,11 @@
 # Treatment Adherence & Readmission Risk Predictor
 
+![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
+![Scikit-learn](https://img.shields.io/badge/Scikit--learn-1.3+-orange?logo=scikit-learn&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-green?logo=xgboost&logoColor=white)
+![Plotly](https://img.shields.io/badge/Plotly-5.18+-purple?logo=plotly&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.29+-red?logo=streamlit&logoColor=white)
+![SHAP](https://img.shields.io/badge/SHAP-0.43+-yellow)
 
 ## TL;DR
 
