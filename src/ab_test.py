@@ -74,8 +74,10 @@ def run_chi_squared_test(sim_results):
         [cc, ct - cc],
         [tc, tt - tc],
     ])
+    # print(contingency_table)  # useful for debugging
 
     chi2, p_value, dof, expected = stats.chi2_contingency(contingency_table)
+    # TODO: could also try fisher's exact test for small samples
 
     return {
         "chi2_statistic": float(chi2),
