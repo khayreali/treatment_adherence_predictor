@@ -1,29 +1,19 @@
 # Treatment Adherence & Readmission Risk Predictor
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
-![Scikit-learn](https://img.shields.io/badge/Scikit--learn-1.3+-orange?logo=scikit-learn&logoColor=white)
-![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-green?logo=xgboost&logoColor=white)
-![Plotly](https://img.shields.io/badge/Plotly-5.18+-purple?logo=plotly&logoColor=white)
-![SHAP](https://img.shields.io/badge/SHAP-0.43+-yellow)
-
-## TL;DR
-
-- Built an ML pipeline on **101,766 hospital encounters** to predict 30-day diabetes readmissions
-- XGBoost model hits **~0.67 ROC-AUC** -- enough to meaningfully triage high-risk patients
-- Simulated A/B test shows a follow-up intervention could prevent **~825 readmissions/year**, saving **$10M+** per 50K-patient cohort
+- Built an ML pipeline on 101,766 hospital encounters to predict 30-day diabetes readmissions
+- XGBoost model hits 0.67 ROC-AUC, enough to meaningfully triage high-risk patients
+- Simulated A/B test shows a follow-up intervention could prevent 825 readmissions/year, saving $10M+ per 50K-patient cohort
 - Top risk drivers: number of inpatient visits, discharge disposition, and medication count
-
-## Key Results
 
 ### Model Performance
 
-The tuned XGBoost beat logistic regression and random forest across the board. Not amazing AUC, but for healthcare readmission prediction this is pretty solid -- most published benchmarks on this dataset land in the 0.63-0.68 range.
+The tuned XGBoost beat logistic regression and random forest across the board. Not amazing AUC, but for healthcare readmission prediction this is pretty solid, most published benchmarks on this dataset land in the 0.63-0.68 range.
 
 ![ROC Curves](assets/roc_curves.png)
 
 ### What Drives Readmission
 
-SHAP values on the final model. Prior inpatient visits dominate everything else, which makes clinical sense -- if you've been admitted before, you're more likely to come back.
+SHAP values on the final model. Prior inpatient visits dominate everything else, which makes clinical sense, if you've been admitted before, you're more likely to come back.
 
 ![Feature Importance](assets/feature_importance.png)
 
@@ -39,38 +29,7 @@ How the model's predicted risk scores distribute across the patient population. 
 
 ![Risk Distribution](assets/risk_distribution.png)
 
-## What This Project Does
-
-Built a pipeline that predicts which diabetes patients will be readmitted within 30 days, then simulated what would happen if we actually intervened on the high-risk ones. I trained three models (logistic regression, random forest, XGBoost), picked the best one, interpreted it with SHAP, and ran an A/B test simulation to estimate real-world cost savings.
-## Project Structure
-
-```
-treatment-adherence-predictor/
-├── assets/                          # Chart PNGs for README
-├── data/
-│   ├── diabetic_data.csv
-│   ├── IDS_mapping.csv
-│   └── dataset.zip
-├── notebooks/
-│   ├── 01_eda.ipynb                 # Exploratory data analysis
-│   ├── 02_modeling.ipynb            # Model training & evaluation
-│   └── 03_ab_test_simulation.ipynb  # A/B test & cost analysis
-├── src/
-│   ├── __init__.py
-│   ├── data_processing.py           # Cleaning & feature engineering
-│   ├── modeling.py                  # Train/evaluate pipeline
-│   ├── ab_test.py                   # Simulation logic
-│   └── dashboard.py                 # Streamlit app
-├── outputs/
-│   ├── figures/                     # Interactive Plotly charts
-│   └── models/                      # Saved models & artifacts
-├── docs/
-│   └── executive_summary.md
-├── requirements.txt
-└── README.md
-```
-
-## How to Run
+## Run Instructions
 
 ```bash
 git clone https://github.com/khayreali/treatment_adherence_predictor.git
@@ -81,7 +40,7 @@ pip install -r requirements.txt
 
 Download `diabetic_data.csv` from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes) and drop it in `data/`. Then run the notebooks in order (01 -> 02 -> 03).
 
-Or just look at the notebooks on GitHub -- they have all the outputs embedded.
+Or just look at the notebooks on GitHub, they have all the outputs embedded.
 
 ## Tech Stack
 
