@@ -4,7 +4,6 @@
 ![Scikit-learn](https://img.shields.io/badge/Scikit--learn-1.3+-orange?logo=scikit-learn&logoColor=white)
 ![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-green?logo=xgboost&logoColor=white)
 ![Plotly](https://img.shields.io/badge/Plotly-5.18+-purple?logo=plotly&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.29+-red?logo=streamlit&logoColor=white)
 ![SHAP](https://img.shields.io/badge/SHAP-0.43+-yellow)
 
 ## TL;DR
@@ -42,8 +41,7 @@ How the model's predicted risk scores distribute across the patient population. 
 
 ## What This Project Does
 
-Built a pipeline that predicts which diabetes patients will be readmitted within 30 days, then simulated what would happen if we actually intervened on the high-risk ones. I trained three models (logistic regression, random forest, XGBoost), picked the best one, interpreted it with SHAP, and ran an A/B test simulation to estimate real-world cost savings. There's also a Streamlit dashboard where you can explore risk scores and filter patient cohorts interactively.
-
+Built a pipeline that predicts which diabetes patients will be readmitted within 30 days, then simulated what would happen if we actually intervened on the high-risk ones. I trained three models (logistic regression, random forest, XGBoost), picked the best one, interpreted it with SHAP, and ran an A/B test simulation to estimate real-world cost savings.
 ## Project Structure
 
 ```
@@ -83,23 +81,11 @@ pip install -r requirements.txt
 
 Download `diabetic_data.csv` from [Kaggle](https://www.kaggle.com/datasets/brandao/diabetes) and drop it in `data/`. Then run the notebooks in order (01 -> 02 -> 03).
 
-```bash
-streamlit run src/dashboard.py
-```
-
-The dashboard is also deployed at [treatment-adherence.streamlit.app](https://treatment-adherence.streamlit.app).
-
 Or just look at the notebooks on GitHub -- they have all the outputs embedded.
-
-## Dashboard
-
-The Streamlit app lets you explore patient risk scores, filter cohorts by age/A1C/medication count, and dig into the A/B test results. Here's what the risk distribution view looks like:
-
-![Dashboard Preview - Risk Distribution](assets/risk_distribution.png)
 
 ## Tech Stack
 
-Python, pandas, scikit-learn, XGBoost, SHAP, Plotly, Streamlit, SciPy, joblib
+Python, pandas, scikit-learn, XGBoost, SHAP, Plotly, SciPy, joblib
 
 ## Data
 
