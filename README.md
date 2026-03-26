@@ -75,8 +75,8 @@ treatment-adherence-predictor/
 ## How to Run
 
 ```bash
-git clone https://github.com/yourusername/treatment-adherence-predictor.git
-cd treatment-adherence-predictor
+git clone https://github.com/khayreali/treatment_adherence_predictor.git
+cd treatment_adherence_predictor
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 ```
